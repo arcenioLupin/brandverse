@@ -1,0 +1,17 @@
+version: "3.9"
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: brandverse
+      POSTGRES_PASSWORD: brandverse
+      POSTGRES_DB: brandverse
+    ports: ["5432:5432"]
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      - ./../db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+  redis:
+    image: redis:7
+    ports: ["6379:6379"]
+volumes:
+  db_data:
