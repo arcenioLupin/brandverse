@@ -1,0 +1,49 @@
+name: ci
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with: { version: 9.7.0 }
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "pnpm"
+
+      - name: Install deps (root only)
+        run: pnpm install --frozen-lockfile=false
+
+      - name: Lint
+        run: pnpm lint
+
+  docker-push:
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request'  # empuja solo en push
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Login to GHCR
+        if: ${{ secrets.GHCR_TOKEN && secrets.GHCR_USERNAME }}
+        run: echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u "${{ secrets.GHCR_USERNAME }}" --password-stdin
+
+      - name: Build API image (if Dockerfile exists)
+        if: hashFiles('apps/api/Dockerfile') != ''
+        run: |
+          IMAGE=ghcr.io/${{ github.repository_owner }}/brandverse-api:${{ github.sha }}
+          docker build -t "$IMAGE" apps/api
+          docker push "$IMAGE"
+
+      - name: Build Worker image (if Dockerfile exists)
+        if: hashFiles('apps/worker/Dockerfile') != ''
+        run: |
+          IMAGE=ghcr.io/${{ github.repository_owner }}/brandverse-worker:${{ github.sha }}
+          docker build -t "$IMAGE" apps/worker
+          docker push "$IMAGE"
