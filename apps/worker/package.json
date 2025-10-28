@@ -1,0 +1,13 @@
+{
+  "name": "@brandverse/worker",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch src/index.js",
+    "start": "node src/index.js"
+  },
+  "dependencies": {
+    "bullmq": "5.8.0",
+    "ioredis": "5.4.1"
+  }
+}
