@@ -1,0 +1,15 @@
+# Dependencias / locks
+node_modules
+pnpm-lock.yaml
+yarn.lock
+package-lock.json
+
+# Builds / caches
+dist
+build
+.out
+coverage
+
+# Next.js build
+.next
+apps/web/.next/**
