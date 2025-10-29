@@ -1,0 +1,8 @@
+{
+  "name": "@brandverse/shared",
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    "./queue.js": "./src/queue.js"
+  }
+}
