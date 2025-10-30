@@ -8,13 +8,13 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
 });
 
-export async function insertJobLog({ event, payload = {}, status = "done", error = null }) {
+export async function insertJobLog({ event,jobId =null, payload = {}, status = "done", error = null, durationMs=null }) {
   const sql = `
-    insert into job_logs(event, payload, status, error)
-    values ($1, $2::jsonb, $3, $4)
+    insert into job_logs(event,job_id, payload, status, error,duration_ms)
+    values ($1, $2, $3::jsonb, $4, $5, $6)
     returning id, created_at
   `;
-  const values = [event, JSON.stringify(payload), status, error];
+  const values = [event, jobId, JSON.stringify(payload), status, error, durationMs];
   const { rows } = await pool.query(sql, values);
   return rows[0];
 }
