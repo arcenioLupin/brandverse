@@ -42,3 +42,10 @@ JOB_REMOVE_FAIL_COUNT=500
 # Worker
 WORKER_CONCURRENCY=4
 
+## Sentiment API
+- `POST /api/sentiment/analyze` — ejecuta análisis e **idempotente** (201 nuevo / 200 existente).
+- `GET /api/sentiment/:id` — devuelve registro completo (auditoría).
+
+Ver `docs/sentiment/README.md` para detalles de arquitectura, envs, migraciones y ejemplos.
+
+
