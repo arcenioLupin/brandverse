@@ -57,6 +57,42 @@ const worker = new Worker(
         return { ok: true, at: new Date().toISOString(), attempt, durationMs: dur };
       }
 
+    if (job.name === "heartbeat") {
+        // Permite forzar fallo en pruebas
+        if (job.data?.forceFail === true) {
+          throw new Error("forced-fail (heartbeat) for testing retries");
+        }
+
+        // Normaliza payload para el log (por si en API llega algo extra)
+        const hb = {
+          service: String(job.data?.service ?? ""),
+          hostname: String(job.data?.hostname ?? ""),
+          ts: job.data?.ts ?? new Date().toISOString(),
+          meta: job.data?.meta ?? {}
+        };
+
+        // Simulador de trabajo real (ajusta si necesitas I/O)
+        // await doHeartbeat(hb);
+
+        const dur = Date.now() - started;
+
+        await insertJobLog({
+          event: "completed",
+          jobId: String(job.id),
+          payload: { name: job.name, attempt, heartbeat: hb },
+          status: "completed",
+          error: null,
+          durationMs: dur,
+        });
+
+        console.log(
+          `[worker] heartbeat completed id=${job.id} attempt=${attempt} duration=${dur}ms service=${hb.service}`
+        );
+
+        return { ok: true, attempt, durationMs: dur };
+      }
+
+
       // Otros tipos de job en el futuro...
       const dur = Date.now() - started;
       console.log("dur: ", dur);
