@@ -235,6 +235,85 @@ router.get("/api/jobs/health", async (_req, res) => {
   }
 });
 
+// --- Sentiment: analyze (idempotente) ---
+import { analyzeAndPersist } from "./services/sentiment/analyze-and-persist.js";
+// Validación mínima del body
+function validateAnalyzeBody(b) {
+  const errors = [];
+  const text = typeof b?.text === "string" && b.text.trim().length > 0 ? b.text : null;
+  if (!text) errors.push("text: string requerido");
+
+  const lang = typeof b?.lang === "string" && b.lang.trim().length > 0 ? b.lang.trim() : null;
+
+  // vendor limitado (por ahora)
+  const vendor = (b?.vendor || "openai").toString().trim().toLowerCase();
+  if (!["openai"].includes(vendor)) errors.push("vendor: 'openai' soportado por ahora");
+
+  const options = b?.options && typeof b.options === "object" ? b.options : {};
+  const meta = b?.meta && typeof b.meta === "object" ? b.meta : {};
+
+  return { ok: errors.length === 0, errors, value: { text, lang, vendor, options, meta } };
+}
+
+// POST /api/sentiment/analyze
+router.post("/api/sentiment/analyze", async (req, res) => {
+  try {
+    const { ok, errors, value } = validateAnalyzeBody(req.body || {});
+    if (!ok) return res.status(400).json({ error: "validation_failed", details: errors });
+
+    const out = await analyzeAndPersist(value);
+    // out: { id, created, created_at?, result? } según tu implementación
+    return res.status(out?.created ? 201 : 200).json({
+      id: Number(out.id),
+      created: !!out.created,
+      createdAt: out.created_at ?? null,
+      result: out.result ?? null,
+    });
+  } catch (err) {
+    console.error("[api] /api/sentiment/analyze error:", err);
+    return res.status(500).json({ error: "analyze_failed" });
+  }
+});
+
+// GET /api/sentiment/:id
+router.get("/api/sentiment/:id", async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isFinite(id) || id <= 0) {
+      return res.status(400).json({ error: "invalid_id" });
+    }
+
+    const q = `
+      SELECT
+        id::bigint AS id, source, text_hash, text_len, lang,
+        model_vendor, model_id, model_version,
+        params_json, prompt_template_id, prompt_vars_json, request_id,
+        llm_response_json, label, score, confidence,
+        reproducibility_hash, created_at
+      FROM sentiment_results
+      WHERE id = $1
+      LIMIT 1
+    `;
+    const { rows } = await pool.query(q, [id]);
+    if (rows.length === 0) return res.status(404).json({ error: "not_found" });
+
+    // Sugerencia: ocultar text_hash si luego expones el texto original por otro canal
+    //return res.json(rows[0]);
+    return res.json({
+      ...rows[0],
+      id: Number(rows[0].id),
+      text_len: Number(rows[0].text_len),
+      score: Number(rows[0].score),
+      confidence: rows[0].confidence != null ? Number(rows[0].confidence) : null,
+    });
+
+  } catch (err) {
+    console.error("[api] /api/sentiment/:id error:", err);
+    return res.status(500).json({ error: "read_failed" });
+  }
+});
+
+
 
 
 export default router;
